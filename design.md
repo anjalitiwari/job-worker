@@ -1,4 +1,4 @@
-# Job Worker Service - Design Documnt
+# Job Worker Service - Design Document
 
 ## Overview 
 
@@ -20,7 +20,7 @@ A prototype job worker service that lets authenticated clients start, stop, quer
 
 - **Authorization:** a simple gRPC interceptor, CN → role mapping, explicit RPC allowlists.
 
-- **Developer exprience:** make certs for local PKI, tests cover auth and streaming including failure scenarios, all run with `go test -race` to catch data races.
+- **Developer experience:** make certs for local PKI, tests cover auth and streaming including failure scenarios, all run with `go test -race` to catch data races.
 
 
 **Out of scope:**
@@ -75,9 +75,9 @@ The CLI and server are separate binaries communicating only via gRPC over mTLS. 
 
 ## Worker library
 
-### Job lifecyle
+### Job lifecycle
 
-Each `Job` has a UUID, a state (`Pending → Running → Exited Failed`), and an `OutputBuffer`.`JobManager` owns the collection of jobs, protected by a `sync.RWMutex` for safe concurrent access.
+Each `Job` has a UUID, a state (`Pending → Running → Exited|Failed`), and an `OutputBuffer`.`JobManager` owns the collection of jobs, protected by a `sync.RWMutex` for safe concurrent access.
 
 ```
 ┌─────────┐    exec()     ┌─────────┐
@@ -166,7 +166,7 @@ All connections require mutual TLS. Both the server and every client present cer
 - **Cipher suites** — determined by the Go runtime for TLS 1.3; no manual override needed or possible.
 - **Certificates** — P-256 ECDSA, generated via `make certs` using Go's `crypto/x509` package. No dependency on OpenSSL.
 
-The `make certs` target generates a CA, a server certificate, and two client certificates (one admin, one viewer) for local devlopment and testing.
+The `make certs` target generates a CA, a server certificate, and two client certificates (one admin, one viewer) for local development and testing.
 
 ### Authorization: CN-based roles
 
@@ -177,7 +177,7 @@ A gRPC unary/stream interceptor extracts the Common Name (CN) from the client's 
 | `admin` | admin | Start, Stop, Status, Output |
 | `viewer` | viewer | Status, Output |
 
-Any request from an unrecognized CN or to a disalowed RPC returns `codes.PermissionDenied`. The role → RPC mapping is an explicit allowlist, not a denylist.
+Any request from an unrecognized CN or to a disallowed RPC returns `codes.PermissionDenied`. The role → RPC mapping is an explicit allowlist, not a denylist.
 
 ## CLI: `jobctl`
 
@@ -201,7 +201,7 @@ Tests run with `go test -race` to catch data races in the buffer, fan-out, and j
 - Job lifecycle: start → running → natural exit, start → running → killed, exec failure → `FAILED`
 - Output buffer: write/read correctness, concurrent writers and readers, reader catches up from byte 0
 
-*Auth tests:**
+**Auth tests:**
 
 - Admin can call all four RPCs
 - Viewer can call Status and Output but gets `PermissionDenied` on Start and Stop
