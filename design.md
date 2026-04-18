@@ -116,9 +116,8 @@ Each job maintains an `OutputBuffer` - It captures combined stdout and stderr in
 
 Key properties:
 
-- **Binary-safe** — the buffer stores raw bytes, not lines or strings.
-- **Read from byte 0** — every reader starts from the beginning of the output, regardless of when it connects.
-- **Multiple concurrent consumers** — any number of clients can stream the same job's output simultaneously. Each reader maintains its own offset.
+- The buffer stores raw bytes, not lines or strings, so it's binary-safe.
+- **Read from byte 0** — every reader starts from the beginning, regardless of when it connects. Multiple clients can stream the same job simultaneously, each with its own offset into the buffer.
 - **No polling** — readers block on `sync.Cond` when caught up. The writer signals on every append, waking all waiting readers immediately.
 - **Post-exit drain** — after a job exits, readers can still connect and read the full output. The final read returns the remaining bytes plus an EOF.
 
@@ -158,7 +157,7 @@ The API is intentionally minimal. `Output` is a server-streaming RPC — the cli
 
 ### Error handling
 
-All RPCs return standard gRPC status codes. Errors include a human-readable message. The server never panics on bad input.
+All RPCs return standard gRPC status codes. Errors include a human-readable message.
 
 - Job ID not found → `NotFound`
 - Invalid request (empty command) → `InvalidArgument`
