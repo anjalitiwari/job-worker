@@ -31,6 +31,13 @@ A prototype job worker service that lets authenticated clients start, stop, quer
 
 ---
 
+## User Stories
+
+- **As an admin**, I want to start a job on a remote machine and stream its output in real time without SSH access.
+- **As a viewer**, I want to check the status and stream the output of a running job, but not be able to start or stop jobs.
+
+---
+
 ## Architecture
 
 Three components, two binaries:
