@@ -36,7 +36,7 @@ A prototype job worker service that lets authenticated clients start, stop, quer
 Three components, two binaries:
 
 ```
-┌────────────────────┐
+                 ┌────────────────────┐
                  │    jobctl (CLI)    │
                  └─────────┬──────────┘
                            │
