@@ -77,25 +77,28 @@ The CLI and server are separate binaries communicating only via gRPC over mTLS. 
 
 ### Job lifecycle
 
-Each `Job` has a UUID, a state (`Pending → Running → Exited|Failed`), and an `OutputBuffer`. `JobManager` owns the collection of jobs, protected by a `sync.RWMutex` for safe concurrent access.
+Each `Job` has a UUID, a state (Running → Exited|Failed), and an OutputBuffer. `JobManager` owns the collection of jobs, protected by a `sync.RWMutex` for safe concurrent access.
 
 ```
-┌─────────┐    exec()     ┌─────────┐
-│ PENDING ├──────────────►│ RUNNING │
-└─────────┘               └────┬────┘
-                               │
-                 ┌─────────────┼─────────────┐
-                 │             │             │
-            natural exit   SIGKILL      exec fails
-                 │             │             │
-                 ▼             ▼             ▼
-            ┌────────┐   ┌────────┐   ┌────────┐
-            │ EXITED │   │ EXITED │   │ FAILED │
-            └────────┘   └────────┘   └────────┘
+             exec() succeeds      ┌─────────┐
+           ┌─────────────────────►│ RUNNING │
+           │                      └────┬────┘
+           │                           │
+           │              ┌────────────┴────────────┐
+           │              │                         │
+           │         natural exit                SIGKILL
+           │              │                         │
+           │              ▼                         ▼
+           │         ┌────────┐                ┌────────┐
+           │         │ EXITED │                │ EXITED │
+           │         └────────┘                └────────┘
+           │
+           │  exec() fails
+           └─────────────────────►┌────────┐
+                                  │ FAILED │
+                                  └────────┘
 ```
-- The `PENDING` state exists briefly between job creation and the `exec` call. If exec succeeds, the state moves to `RUNNING` before `Start` returns. If exec fails, it moves directly to `FAILED`. Clients will not observe `PENDING` under normal conditions, but it keeps the state machine explicit.
-
-- State transitions are protected by a mutex within each `Job`. The `FAILED` state is reserved exclusively for pre-exec failures (e.g., binary not found).
+State transitions are protected by a mutex within each `Job`. The `FAILED` state is reserved exclusively for pre-exec failures (e.g., binary not found).
 
 ### Stop and Exit Semantics
 
@@ -143,7 +146,12 @@ message StatusRequest { string job_id = 1; }
 message OutputRequest { string job_id = 1; }
 message OutputChunk   { bytes data = 1; }
 
-enum JobState { PENDING = 0; RUNNING = 1; EXITED = 2; FAILED = 3; }
+enum JobState {
+  JOB_STATE_UNSPECIFIED = 0;
+  JOB_STATE_RUNNING     = 1;
+  JOB_STATE_EXITED      = 2;
+  JOB_STATE_FAILED      = 3;
+}
 
 message StatusResponse {
   string   job_id    = 1;
