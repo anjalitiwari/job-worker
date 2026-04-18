@@ -75,6 +75,37 @@ The CLI and server are separate binaries communicating only via gRPC over mTLS. 
 
 ## Worker library
 
+### Library interface
+
+```go
+type JobManager struct { /* ... */ }
+
+func NewJobManager() *JobManager
+func (m *JobManager) Start(command string, args []string) (jobID string, err error)
+func (m *JobManager) Stop(jobID string) error
+func (m *JobManager) Status(jobID string) (*JobStatus, error)
+func (m *JobManager) Output(jobID string) (io.ReadCloser, error)
+
+type JobStatus struct {
+    ID       string
+    State    JobState
+    ExitCode int
+    PID      int
+}
+
+type JobState int
+
+const (
+    JobStateUnspecified JobState = 0
+    JobStateRunning     JobState = 1
+    JobStateExited      JobState = 2
+    JobStateFailed      JobState = 3
+)
+```
+
+The library is network-agnostic — it knows nothing about gRPC. The gRPC server calls into `JobManager` to do the real work. `Output` returns an `io.ReadCloser` that streams bytes from byte 0; each call returns a fresh reader with its own cursor, so multiple clients can stream the same job without stepping on each other.
+
+
 ### Job lifecycle
 
 Each `Job` has a UUID, a state (Running → Exited|Failed), and an OutputBuffer. `JobManager` owns the collection of jobs, protected by a `sync.RWMutex` for safe concurrent access.
