@@ -106,11 +106,9 @@ Stopping a job sends `SIGKILL` directly — there is no `SIGTERM` grace period. 
 
 Exit code interpretation:
 
-| Scenario | `exit_code` |
-|---|---|
-| Natural exit | Actual exit code from the process |
-| Killed via SIGKILL | -1 |
-| Exec failure (binary not found, permission denied) | Not set — state is `FAILED` |
+- Natural exit — actual exit code from the process
+- Killed via SIGKILL — exit code is `-1`
+- Exec failure (binary not found, permission denied) — exit code is not set, state is `FAILED`
 
 ### Output streaming
 
@@ -160,17 +158,14 @@ The API is intentionally minimal. `Output` is a server-streaming RPC — the cli
 
 ### Error handling
 
-All RPCs return standard gRPC status codes:
+All RPCs return standard gRPC status codes. Errors include a human-readable message. The server never panics on bad input.
 
-| Condition | Status code |
-|---|---|
-| Job ID not found | `NotFound` |
-| Invalid request (empty command) | `InvalidArgument` |
-| Stop on an already-exited job | `FailedPrecondition` |
-| Unauthorized CN or disallowed RPC | `PermissionDenied` |
-| Unexpected internal failure | `Internal` |
+- Job ID not found → `NotFound`
+- Invalid request (empty command) → `InvalidArgument`
+- Stop on an already-exited job → `FailedPrecondition`
+- Unauthorized CN or disallowed RPC → `PermissionDenied`
+- Unexpected internal failure → `Internal`
 
-Errors include a human-readable message. The server never panics on bad input.
 
 ## Security
 
@@ -186,7 +181,7 @@ The `make certs` target generates a CA, a server certificate, and two client cer
 
 ### Authorization: CN-based roles
 
-A gRPC unary/stream interceptor extracts the Common Name (CN) from the client's verified certificate chain and maps it to a role:
+A gRPC unary/stream interceptor extracts the Common Name(CN) from the client's verified certificate chain and maps it to a role:
 
 | CN | Role | Allowed RPCs |
 |---|---|---|
