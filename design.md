@@ -93,14 +93,16 @@ Each `Job` has a UUID, a state (`Pending → Running → Exited|Failed`), and an
             │ EXITED │   │ EXITED │   │ FAILED │
             └────────┘   └────────┘   └────────┘
 ```
+- The `PENDING` state exists briefly between job creation and the `exec` call. If exec succeeds, the state moves to `RUNNING` before `Start` returns. If exec fails, it moves directly to `FAILED`. Clients will not observe `PENDING` under normal conditions, but it keeps the state machine explicit.
 
-State transitions are protected by a mutex within each `Job`. The `FAILED` state is reserved exclusively for pre-exec failures (e.g., binary not found).
+- State transitions are protected by a mutex within each `Job`. The `FAILED` state is reserved exclusively for pre-exec failures (e.g., binary not found).
 
 ### Stop and Exit Semantics
 
 Stopping a job sends `SIGKILL` directly — there is no `SIGTERM` grace period. A production system would send `SIGTERM` first, wait, then escalate to `SIGKILL`; this keeps things simple.
 
-#### Note: Child process orphaning is a known limitation. If a job spawns child processes, those children are not tracked or killed when the parent is stopped. This will be noted as a TODO in the code.
+
+> **Note:** Child process orphaning is a known limitation. If a job spawns child processes, those children are not tracked or killed when the parent is stopped. This will be noted as a TODO in the code.
 
 Exit code interpretation:
 
@@ -155,6 +157,20 @@ message StatusResponse {
 ```
 
 The API is intentionally minimal. `Output` is a server-streaming RPC — the client opens one call and receives chunks until the job exits and the buffer drains.
+
+### Error handling
+
+All RPCs return standard gRPC status codes:
+
+| Condition | Status code |
+|---|---|
+| Job ID not found | `NotFound` |
+| Invalid request (empty command) | `InvalidArgument` |
+| Stop on an already-exited job | `FailedPrecondition` |
+| Unauthorized CN or disallowed RPC | `PermissionDenied` |
+| Unexpected internal failure | `Internal` |
+
+Errors include a human-readable message. The server never panics on bad input.
 
 ## Security
 
@@ -221,3 +237,4 @@ Tests run with `go test -race` to catch data races in the buffer, fan-out, and j
 - Unbounded output buffer — memory grows without limit on chatty processes.
 - No persistence — all state is lost on server restart.
 - Fixed role set — no revocation, no per-job ACLs.
+- Server shutdown — if the server process exits, running child processes are orphaned. Graceful shutdown with job cleanup can be a future improvement.
