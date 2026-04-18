@@ -77,7 +77,7 @@ The CLI and server are separate binaries communicating only via gRPC over mTLS. 
 
 ### Job lifecycle
 
-Each `Job` has a UUID, a state (`Pending → Running → Exited|Failed`), and an `OutputBuffer`.`JobManager` owns the collection of jobs, protected by a `sync.RWMutex` for safe concurrent access.
+Each `Job` has a UUID, a state (`Pending → Running → Exited|Failed`), and an `OutputBuffer`. `JobManager` owns the collection of jobs, protected by a `sync.RWMutex` for safe concurrent access.
 
 ```
 ┌─────────┐    exec()     ┌─────────┐
@@ -96,7 +96,7 @@ Each `Job` has a UUID, a state (`Pending → Running → Exited|Failed`), and an
 
 State transitions are protected by a mutex within each `Job`. The `FAILED` state is reserved exclusively for pre-exec failures (e.g., binary not found).
 
-## Stop and Exit Semantics
+### Stop and Exit Semantics
 
 Stopping a job sends `SIGKILL` directly — there is no `SIGTERM` grace period. A production system would send `SIGTERM` first, wait, then escalate to `SIGKILL`; this keeps things simple.
 
