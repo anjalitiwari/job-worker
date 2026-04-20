@@ -200,7 +200,7 @@ All RPCs return standard gRPC status codes. Errors include a human-readable mess
 - Job ID not found, or caller lacks permission to access it → `NotFound`
 - Invalid request (empty command) → `InvalidArgument`
 - Stop on an already-exited job → `FailedPrecondition`
-- Caller is not authenticated (no verified cert, unknown identity) → Unauthenticated
+- Caller is not authenticated (no verified cert, unknown identity) → `Unauthenticated`
 - Unexpected internal failure → `Internal`
 
 > **Note:** To avoid leaking information about which jobs exist, authorization failures on per-job RPCs return `NotFound` rather than `PermissionDenied`. `Unauthenticated` is still returned for completely unauthenticated callers.
