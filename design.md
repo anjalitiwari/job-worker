@@ -57,8 +57,7 @@ Three components, two binaries:
                  ┌─────────▼──────────┐
                  │   Worker Library   │
                  │                    │
-                 │   JobManager       │
-                 │   ├── Job          │
+                 │   Job              │
                  │   └── OutputBuffer │
                  └─────────┬──────────┘
                            │
@@ -78,16 +77,16 @@ The CLI and server are separate binaries communicating only via gRPC over mTLS. 
 ### Library interface
 
 ```go
-type JobManager struct { /* ... */ }
+//The library exposes a single Job primitive.
+type Job struct { /* ... */ }
 
-func NewJobManager() *JobManager
-func (m *JobManager) Start(command string, args []string) (jobID string, err error)
-func (m *JobManager) Stop(jobID string) error
-func (m *JobManager) Status(jobID string) (*JobStatus, error)
-func (m *JobManager) Output(jobID string) (io.ReadCloser, error)
+func NewJob(command string, args []string) (*Job, error)
+
+func (j *Job) Stop() error
+func (j *Job) Status() JobStatus
+func (j *Job) Output() io.ReadCloser  //starts at byte 0
 
 type JobStatus struct {
-    ID       string
     State    JobState
     ExitCode int
     PID      int
@@ -103,12 +102,12 @@ const (
 )
 ```
 
-The library is network-agnostic — it knows nothing about gRPC. The gRPC server calls into `JobManager` to do the real work. `Output` returns an `io.ReadCloser` that streams bytes from byte 0; each call returns a fresh reader with its own cursor, so multiple clients can stream the same job without stepping on each other.
+The library exposes a single Job primitive — it can run a process, stream its output, and stop it.It doesn't track jobs, assign IDs, or manage anything across multiple jobs. Those are service-level concerns: the gRPC server keeps a map[string]*Job and picks UUIDs, but that's the server's call. Output returns an io.ReadCloser, and each call gets a fresh reader starting from byte 0 so multiple clients can stream the same job without stepping on each other.
 
 
 ### Job lifecycle
 
-Each `Job` has a UUID, a state (Running → Exited|Failed), and an OutputBuffer. `JobManager` owns the collection of jobs, protected by a `sync.RWMutex` for safe concurrent access.
+Each `Job` has a UUID, a state (Running → Exited|Failed), and an OutputBuffer. The server assigns a UUID on creation and stores the Job reference in map[string]*Job, protected by a `sync.RWMutex` for safe concurrent access.
 
 ```
              exec() succeeds      ┌─────────┐
