@@ -239,6 +239,8 @@ jobctl status <job-id>
 jobctl output <job-id>
 ```
 
+Certificates and server address are passed via flags (`--cert`, `--key`, `--ca`, `--server`), with `./certs/` as the default directory for local dev.
+
 `output` streams chunks to stdout until the job exits and the buffer drains, then exits cleanly. The CLI handles `SIGINT` / `SIGTERM` by cancelling the gRPC context.
 
 ## Testing Strategy
