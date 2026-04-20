@@ -214,18 +214,19 @@ All connections require mutual TLS. Both the server and every client present cer
 - **Cipher suites** — determined by the Go runtime for TLS 1.3; no manual override needed or possible.
 - **Certificates** — P-256 ECDSA, generated via `make certs` using Go's `crypto/x509` package. No dependency on OpenSSL.
 
-The `make certs` target generates a CA, a server certificate, and two client certificates (one admin, one viewer) for local development and testing.
+The make certs target generates a CA, a server certificate, and two client certificates (one for alice, one for bob) for local development and testing. The identity-to-role mapping (alice → admin, bob → viewer) is configured at server startup.
 
-### Authorization: CN-based roles
 
-A gRPC unary/stream interceptor extracts the Common Name(CN) from the client's verified certificate chain and maps it to a role:
+### Authorization: identity and role separation
 
-| CN | Role | Allowed RPCs |
-|---|---|---|
-| `admin` | admin | Start, Stop, Status, Output |
-| `viewer` | viewer | Status, Output |
+Authentication and authorization are handled as two separate steps. The gRPC interceptor first extracts the Common Name (CN) from the verified client certificate — this identifies *who* the client is. A separate identity-to-role mapping, loaded at startup, decides *what* they're allowed to do:
 
-Any request from an unrecognized CN or to a disallowed RPC returns `codes.PermissionDenied`. The role → RPC mapping is an explicit allowlist, not a denylist.
+| Identity      | Role   | Allowed RPCs                |
+|---------------|--------|-----------------------------|
+| Alice         | admin  | Start, Stop, Status, Output |
+| Bob           | viewer | Status, Output              |
+
+Keeping identity and authorization separate means changing a user's role is a config update rather than issuing a new certificate, and adding new roles doesn't require inventing new CNs.The mapping is an explicit allowlist — unknown users get no access by default.
 
 ## CLI: `jobctl`
 
