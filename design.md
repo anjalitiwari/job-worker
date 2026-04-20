@@ -197,11 +197,13 @@ The API is intentionally minimal. `Output` is a server-streaming RPC — the cli
 
 All RPCs return standard gRPC status codes. Errors include a human-readable message.
 
-- Job ID not found → `NotFound`
+- Job ID not found, or caller lacks permission to access it → `NotFound`
 - Invalid request (empty command) → `InvalidArgument`
 - Stop on an already-exited job → `FailedPrecondition`
-- Unauthorized CN or disallowed RPC → `PermissionDenied`
+- Caller is not authenticated (no verified cert, unknown identity) → Unauthenticated
 - Unexpected internal failure → `Internal`
+
+> **Note:** To avoid leaking information about which jobs exist, authorization failures on per-job RPCs return `NotFound` rather than `PermissionDenied`. `Unauthenticated` is still returned for completely unauthenticated callers.
 
 
 ## Security
@@ -255,8 +257,8 @@ Tests run with `go test -race` to catch data races in the buffer, fan-out, and j
 **Auth tests:**
 
 - Admin can call all four RPCs
-- Viewer can call Status and Output but gets `PermissionDenied` on Start and Stop
-- Unknown CN gets `PermissionDenied` on all RPCs
+- Viewer gets `NotFound` on Start, Stop, and on jobs they don't own
+- Unknown CN gets `Unauthenticated` on all RPCs
 
 **Streaming integration tests:**
 
