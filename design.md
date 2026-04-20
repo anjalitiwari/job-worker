@@ -107,7 +107,7 @@ The library exposes a single Job primitive — it can run a process, stream its 
 
 ### Job lifecycle
 
-Each `Job` has a UUID, a state (Running → Exited|Failed), and an OutputBuffer. The server assigns a UUID on creation and stores the Job reference in map[string]*Job, protected by a `sync.RWMutex` for safe concurrent access.
+Each `Job` has a state (Running → Exited|Failed), and an OutputBuffer. The server assigns a UUID on creation and stores the Job reference in map[string]*Job, protected by a `sync.RWMutex` for safe concurrent access.
 
 ```
              exec() succeeds      ┌─────────┐
