@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package jobworker;
+
+option go_package = "github.com/anjalitiwari/job-worker/proto";
+
+// JobWorker runs, stops, queries, and streams output from Linux processes.
+service JobWorker {
+  rpc Start  (StartRequest)  returns (StartResponse);
+  rpc Stop   (StopRequest)   returns (StopResponse);
+  rpc Status (StatusRequest) returns (StatusResponse);
+  rpc Output (OutputRequest) returns (stream OutputChunk);
+}
+
+message StartRequest {
+  string command = 1;
+  repeated string args = 2;
+}
+
+message StartResponse {
+  string job_id = 1;
+}
+
+message StopRequest {
+  string job_id = 1;
+}
+
+message StopResponse {}
+
+message StatusRequest {
+  string job_id = 1;
+}
+
+message OutputRequest {
+  string job_id = 1;
+}
+
+message OutputChunk {
+  bytes data = 1;
+}
+
+enum JobState {
+  JOB_STATE_UNSPECIFIED = 0;
+  JOB_STATE_RUNNING     = 1;
+  JOB_STATE_EXITED      = 2;
+  JOB_STATE_FAILED      = 3;
+}
+
+message StatusResponse {
+  string   job_id    = 1;
+  JobState state     = 2;
+  int32    exit_code = 3;
+  int32    pid       = 4;
+}
+
