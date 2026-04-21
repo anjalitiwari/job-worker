@@ -95,7 +95,10 @@ func (j *Job) wait() {
 }
 
 // Stop sends SIGKILL. No grace period — see design doc.
-
+//
+// TODO: this kills the direct child only. If the command spawned its
+// own children, they're orphaned. A future pass should use a process
+// group (Setpgid) and signal the whole group.
 func (j *Job) Stop() error {
 	j.mu.Lock()
 	running := j.state == JobStateRunning
