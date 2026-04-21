@@ -124,3 +124,4 @@ func TestStateTransitions(t *testing.T) {
 		t.Errorf("final state %v", j.Status().State)
 	}
 }
+

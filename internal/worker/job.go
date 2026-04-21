@@ -9,7 +9,6 @@ import (
 )
 
 type JobState int
-
 const (
 	JobStateUnspecified JobState = iota
 	JobStateRunning

@@ -5,7 +5,6 @@ import (
 	"io"
 	"sync"
 )
-
 // OutputBuffer is an append-only byte buffer with one writer and many
 // concurrent readers. Each reader starts at byte 0 and blocks when it
 // catches up; readers wake on the next Write or Close.
@@ -41,7 +40,7 @@ func (b *OutputBuffer) Write(p []byte) (int, error) {
 func (b *OutputBuffer) Close() error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-
+	
 	if b.closed {
 		return nil
 	}
@@ -74,7 +73,6 @@ func (r *bufferReader) Read(p []byte) (int, error) {
 	for r.offset >= len(r.buf.data) && !r.buf.closed && !r.closed {
 		r.buf.cond.Wait()
 	}
-
 	if r.closed {
 		return 0, io.ErrClosedPipe
 	}
