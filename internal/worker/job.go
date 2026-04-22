@@ -31,7 +31,7 @@ func (s JobState) String() string {
 
 type JobStatus struct {
 	State    JobState
-	ExitCode int
+	ExitCode int // valid only when State == JobStateExited
 	PID      int
 }
 
@@ -39,7 +39,6 @@ type JobStatus struct {
 type Job struct {
 	cmd *exec.Cmd
 	buf *OutputBuffer
-
 	mu       sync.Mutex
 	state    JobState
 	exitCode int
@@ -58,7 +57,6 @@ func NewJob(command string, args []string) (*Job, error) {
 		buf:  NewOutputBuffer(),
 		done: make(chan struct{}),
 	}
-
 	// stdout and stderr both go to the same buffer.
 	j.cmd.Stdout = j.buf
 	j.cmd.Stderr = j.buf
@@ -66,31 +64,29 @@ func NewJob(command string, args []string) (*Job, error) {
 	if err := j.cmd.Start(); err != nil {
 		return nil, err
 	}
-
 	j.state = JobStateRunning
 	go j.wait()
 	return j, nil
 }
 
 func (j *Job) wait() {
-	err := j.cmd.Wait()
+    err := j.cmd.Wait()
+    j.mu.Lock()
 
-	j.mu.Lock()
-	defer j.mu.Unlock()
-	defer close(j.done)
-	defer j.buf.Close()
-
-	switch {
-	case err == nil:
-		j.state = JobStateExited
-		j.exitCode = 0
-	case errors.As(err, new(*exec.ExitError)):
-		j.state = JobStateExited
-		j.exitCode = j.cmd.ProcessState.ExitCode() // -1 if the process was killed by a signal
-	default:
-		j.state = JobStateFailed
-		j.exitCode = -1
-	}
+    switch {
+    case err == nil:
+        j.state = JobStateExited
+        j.exitCode = 0
+    case errors.As(err, new(*exec.ExitError)):
+        j.state = JobStateExited
+        j.exitCode = j.cmd.ProcessState.ExitCode()
+    default:
+        j.state = JobStateFailed
+        j.exitCode = -1
+    }
+    j.mu.Unlock()
+    j.buf.Close()
+    close(j.done)
 }
 
 // Stop sends SIGKILL. No grace period — see design doc.
@@ -100,10 +96,9 @@ func (j *Job) wait() {
 // group (Setpgid) and signal the whole group.
 func (j *Job) Stop() error {
 	j.mu.Lock()
-	running := j.state == JobStateRunning
-	j.mu.Unlock()
+	defer j.mu.Unlock()
 
-	if !running {
+	if j.state != JobStateRunning {
 		return errors.New("job is not running")
 	}
 	return j.cmd.Process.Signal(syscall.SIGKILL)
@@ -126,7 +121,3 @@ func (j *Job) Output() io.ReadCloser {
 	return j.buf.Reader()
 }
 
-// Done is closed once the process has exited.
-func (j *Job) Done() <-chan struct{} {
-	return j.done
-}

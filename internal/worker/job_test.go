@@ -24,7 +24,7 @@ func TestNaturalExit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	<-j.Done()
+	<-j.done
 
 	st := j.Status()
 	if st.State != JobStateExited || st.ExitCode != 0 {
@@ -39,7 +39,7 @@ func TestNaturalExit(t *testing.T) {
 
 func TestNonZeroExit(t *testing.T) {
 	j, _ := NewJob("sh", []string{"-c", "exit 42"})
-	<-j.Done()
+	<-j.done
 	if code := j.Status().ExitCode; code != 42 {
 		t.Errorf("exit code %d, want 42", code)
 	}
@@ -53,7 +53,7 @@ func TestStopKills(t *testing.T) {
 	}
 
 	select {
-	case <-j.Done():
+	case <-j.done:
 	case <-time.After(2 * time.Second):
 		t.Fatal("process did not die after SIGKILL")
 	}
@@ -65,7 +65,7 @@ func TestStopKills(t *testing.T) {
 
 func TestStopAfterExit(t *testing.T) {
 	j, _ := NewJob("echo", []string{"bye"})
-	<-j.Done()
+	<-j.done
 	if err := j.Stop(); err == nil {
 		t.Error("expected error stopping an exited job")
 	}
@@ -73,7 +73,7 @@ func TestStopAfterExit(t *testing.T) {
 
 func TestStderrMerged(t *testing.T) {
 	j, _ := NewJob("sh", []string{"-c", "echo out; echo err 1>&2"})
-	<-j.Done()
+	<-j.done
 
 	s, _ := io.ReadAll(j.Output())
 	if !strings.Contains(string(s), "out") || !strings.Contains(string(s), "err") {
@@ -91,7 +91,7 @@ func TestConcurrentOutputReaders(t *testing.T) {
 			got <- string(b)
 		}()
 	}
-	<-j.Done()
+	<-j.done
 
 	for i := 0; i < 2; i++ {
 		select {
@@ -119,7 +119,7 @@ func TestStateTransitions(t *testing.T) {
 	if j.Status().State != JobStateRunning {
 		t.Errorf("initial state %v", j.Status().State)
 	}
-	<-j.Done()
+	<-j.done
 	if j.Status().State != JobStateExited {
 		t.Errorf("final state %v", j.Status().State)
 	}
