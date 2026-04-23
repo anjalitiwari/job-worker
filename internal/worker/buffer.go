@@ -9,7 +9,7 @@ import (
 // concurrent readers. Each reader starts at byte 0 and blocks when it
 // catches up; readers wake on the next Write or Close.
 type OutputBuffer struct {
-	mu     sync.RWMutex
+	mu     sync.RWMutex // Safe for concurrent use
 	cond   *sync.Cond
 	data   []byte
 	closed bool
