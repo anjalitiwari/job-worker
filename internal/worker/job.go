@@ -85,10 +85,10 @@ func (j *Job) wait() {
 
 	// Close buffer first so readers see EOF, then done so anyone
 	// waiting wakes up with final state already visible.
-	j.mu.Unlock()
     j.buf.Close()
     close(j.done)
 }
+
 
 // Stop sends SIGKILL. No grace period — see design doc.
 //

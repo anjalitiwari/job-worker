@@ -9,7 +9,7 @@ import (
 // concurrent readers. Each reader starts at byte 0 and blocks when it
 // catches up; readers wake on the next Write or Close.
 type OutputBuffer struct {
-	mu     sync.Mutex
+	mu     sync.RWMutex
 	cond   *sync.Cond
 	data   []byte
 	closed bool
@@ -17,7 +17,7 @@ type OutputBuffer struct {
 
 func NewOutputBuffer() *OutputBuffer {
 	b := &OutputBuffer{}
-	b.cond = sync.NewCond(&b.mu)
+	b.cond = sync.NewCond(b.mu.RLocker())
 	return b
 }
 
@@ -66,8 +66,8 @@ func (r *bufferReader) Read(p []byte) (int, error) {
 		return 0, nil
 	}
 
-	r.buf.mu.Lock()
-	defer r.buf.mu.Unlock()
+	r.buf.mu.RLock()
+	defer r.buf.mu.RUnlock()
 
 	// Wait for new bytes, buffer close, or reader close.
 	for r.offset >= len(r.buf.data) && !r.buf.closed && !r.closed {
