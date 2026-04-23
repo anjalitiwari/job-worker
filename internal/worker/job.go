@@ -13,7 +13,6 @@ const (
 	JobStateUnspecified JobState = iota
 	JobStateRunning
 	JobStateExited
-	JobStateFailed
 )
 
 func (s JobState) String() string {
@@ -22,8 +21,6 @@ func (s JobState) String() string {
 		return "RUNNING"
 	case JobStateExited:
 		return "EXITED"
-	case JobStateFailed:
-		return "FAILED"
 	default:
 		return "UNSPECIFIED"
 	}
@@ -70,21 +67,25 @@ func NewJob(command string, args []string) (*Job, error) {
 }
 
 func (j *Job) wait() {
-    err := j.cmd.Wait()
-    j.mu.Lock()
+	err := j.cmd.Wait()
+	j.mu.Lock()
 
-    switch {
-    case err == nil:
-        j.state = JobStateExited
-        j.exitCode = 0
-    case errors.As(err, new(*exec.ExitError)):
-        j.state = JobStateExited
-        j.exitCode = j.cmd.ProcessState.ExitCode()
-    default:
-        j.state = JobStateFailed
-        j.exitCode = -1
-    }
-    j.mu.Unlock()
+	switch {
+	case err == nil:
+		j.state = JobStateExited
+		j.exitCode = 0
+	case errors.As(err, new(*exec.ExitError)):
+		j.state = JobStateExited
+		j.exitCode = j.cmd.ProcessState.ExitCode() // -1 if signaled
+	default:
+		j.state = JobStateExited
+		j.exitCode = -1
+	}
+	j.mu.Unlock()
+
+	// Close buffer first so readers see EOF, then done so anyone
+	// waiting wakes up with final state already visible.
+	j.mu.Unlock()
     j.buf.Close()
     close(j.done)
 }

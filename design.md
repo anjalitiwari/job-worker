@@ -98,7 +98,6 @@ const (
     JobStateUnspecified JobState = 0
     JobStateRunning     JobState = 1
     JobStateExited      JobState = 2
-    JobStateFailed      JobState = 3
 )
 ```
 
@@ -107,28 +106,27 @@ The library exposes a single Job primitive — it can run a process, stream its 
 
 ### Job lifecycle
 
-Each `Job` has a state (Running → Exited|Failed), and an OutputBuffer. The server assigns a UUID on creation and stores the Job reference in map[string]*Job, protected by a `sync.RWMutex` for safe concurrent access.
+Each `Job` has a state (Running → Exited), and an OutputBuffer. The server assigns a UUID on creation and stores the Job reference in map[string]*Job, protected by a `sync.RWMutex` for safe concurrent access.
+
 
 ```
-             exec() succeeds      ┌─────────┐
-           ┌─────────────────────►│ RUNNING │
-           │                      └────┬────┘
-           │                           │
-           │              ┌────────────┴────────────┐
-           │              │                         │
-           │         natural exit                SIGKILL
-           │              │                         │
-           │              ▼                         ▼
-           │         ┌────────┐                ┌────────┐
-           │         │ EXITED │                │ EXITED │
-           │         └────────┘                └────────┘
-           │
-           │  exec() fails
-           └─────────────────────►┌────────┐
-                                  │ FAILED │
-                                  └────────┘
+          exec() succeeds         ┌─────────┐
+         ┌───────────────────────►│ RUNNING │
+         │                        └────┬────┘
+         │                             │
+         │                ┌────────────┴────────────┐
+         │                │                         │
+         │           natural exit                SIGKILL
+         │                │                         │
+         │                ▼                         ▼
+         │           ┌────────┐                ┌────────┐
+         │           │ EXITED │                │ EXITED │
+         │           └────────┘                └────────┘
+         │
+         │  exec() fails → returns error, no Job is created
+         └─────────────────────────────────────────────────
 ```
-State transitions are protected by a mutex within each `Job`. The `FAILED` state is reserved exclusively for pre-exec failures (e.g., binary not found).
+State transitions are protected by a mutex within each Job. Pre-exec failures (binary not found, permission denied) are returned as errors from NewJob — no Job is created. The state machine is intentionally minimal: any termination lands in Exited, with the exit code carrying whether it was a natural exit or a signal.
 
 ### Stop and Exit Semantics
 
@@ -141,7 +139,7 @@ Exit code interpretation:
 
 - Natural exit — actual exit code from the process
 - Killed via SIGKILL — exit code is `-1`
-- Exec failure (binary not found, permission denied) — exit code is not set, state is `FAILED`
+- Exec failure - returned as an error from NewJob; no Job is created
 
 ### Output streaming
 
@@ -180,7 +178,6 @@ enum JobState {
   JOB_STATE_UNSPECIFIED = 0;
   JOB_STATE_RUNNING     = 1;
   JOB_STATE_EXITED      = 2;
-  JOB_STATE_FAILED      = 3;
 }
 
 message StatusResponse {
@@ -251,13 +248,14 @@ Tests run with `go test -race` to catch data races in the buffer, fan-out, and j
 
 **Worker library tests:**
 
-- Job lifecycle: start → running → natural exit, start → running → killed, exec failure → `FAILED`
+- Job lifecycle: start → running → natural exit, start → running → killed, exec failure → error returned from NewJob
 - Output buffer: write/read correctness, concurrent writers and readers, reader catches up from byte 0
+
 
 **Auth tests:**
 
 - Admin can call all four RPCs
-- Viewer gets `NotFound` on Start, Stop, and on jobs they don't own
+- Viewer gets PermissionDenied on Start and Stop (not per-job RPCs), NotFound on Status/Output for jobs they don't own 
 - Unknown CN gets `Unauthenticated` on all RPCs
 
 **Streaming integration tests:**

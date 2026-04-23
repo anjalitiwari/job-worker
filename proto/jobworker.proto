@@ -43,7 +43,6 @@ enum JobState {
   JOB_STATE_UNSPECIFIED = 0;
   JOB_STATE_RUNNING     = 1;
   JOB_STATE_EXITED      = 2;
-  JOB_STATE_FAILED      = 3;
 }
 
 message StatusResponse {
