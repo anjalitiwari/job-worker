@@ -67,20 +67,24 @@ func (r *bufferReader) Read(p []byte) (int, error) {
 	}
 
 	r.buf.mu.RLock()
-	defer r.buf.mu.RUnlock()
 
 	// Wait for new bytes, buffer close, or reader close.
 	for r.offset >= len(r.buf.data) && !r.buf.closed && !r.closed {
 		r.buf.cond.Wait()
 	}
+
 	if r.closed {
+		r.buf.mu.RUnlock()
 		return 0, io.ErrClosedPipe
 	}
 	if r.offset >= len(r.buf.data) {
+		r.buf.mu.RUnlock()
 		return 0, io.EOF
 	}
 
-	n := copy(p, r.buf.data[r.offset:])
+	available := r.buf.data[r.offset:]
+	r.buf.mu.RUnlock()
+	n := copy(p, available)
 	r.offset += n
 	return n, nil
 }
