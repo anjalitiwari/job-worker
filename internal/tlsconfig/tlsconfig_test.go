@@ -151,5 +151,3 @@ func handshake(t *testing.T, serverCfg, clientCfg *tls.Config) error {
 		return nil
 	}
 }
-
-
