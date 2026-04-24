@@ -17,7 +17,8 @@ import (
 	"time"
 )
 
-const validFor = 10 * 365 * 24 * time.Hour
+const validFor = 365 * 24 * time.Hour 
+
 
 // Generate writes a CA, server cert, and one client cert per name
 // into dir. Files are {name}.crt and {name}.key.
