@@ -19,7 +19,7 @@ proto:
 
 # Generate certs
 certs:
-	go run scripts/gencerts
+	go run ./scripts/gencerts
 
 clean:
 	rm -rf bin certs
