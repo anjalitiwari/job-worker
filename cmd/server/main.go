@@ -7,10 +7,9 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-
+	
 	"github.com/anjalitiwari/job-worker/internal/auth"
 	"github.com/anjalitiwari/job-worker/internal/server"
 	"github.com/anjalitiwari/job-worker/internal/tlsconfig"
