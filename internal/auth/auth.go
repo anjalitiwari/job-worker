@@ -32,7 +32,7 @@ type IdentityMap map[string]Role
 
 // allowedRoles is the per-RPC allowlist. Method names are full grpc paths like 
 // "//jobworker.JobWorker/Start"
-var allowedRoles = map[string[]	Role{
+var allowedRoles = map[string][]Role{
 	"/jobworker.JobWorker/Start" : {RoleAdmin},
 	"/jobworker.JobWorker/Stop" : {RoleAdmin},
 	"/jobworker.JobWorker/Status" : {RoleAdmin, RoleViewer},
@@ -44,7 +44,7 @@ type ctxKey struct{}
 var identityKey = ctxKey{}
 
 // IdentityFromContext returns the CN of the calling client.
-func IndentityFromContext(ctx context.Context) string {
+func IdentityFromContext(ctx context.Context) string {
 	cn, _ := ctx.Value(identityKey).(string)
 	return cn
 }	
@@ -87,7 +87,8 @@ func authorize(ctx context.Context, method string, idMap IdentityMap) (context.C
 	if !roleAllowed(role, method){
 		return nil, status.Errorf(codes.PermissionDenied, "identity %s with role %s not allowed to call %s", cn, role, method)
 	}
-	return context.WithValue(ctx, identidyKey, cn), nil
+	return context.WithValue(ctx, identityKey, cn), nil
+
 }
 
 func cnFromContext(ctx context.Context) (string, error) {
@@ -98,9 +99,10 @@ func cnFromContext(ctx context.Context) (string, error) {
 	tlsInfo,ok := p.AuthInfo.(credentials.TLSInfo)
 	if !ok {
 		return "", status.Error(codes.Unauthenticated, "no TLS information found")
+		
 	}
 	chains := tlsInfo.State.VerifiedChains
-	if len(chains) == 0 || len(chains[0])) == 0 {
+	if len(chains) == 0 || len(chains[0]) == 0 {
 		return "", status.Error(codes.Unauthenticated, "no verified client certs found")
 	}
 	return chains[0][0].Subject.CommonName, nil
