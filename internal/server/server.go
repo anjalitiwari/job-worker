@@ -99,6 +99,7 @@ func (s *Server) Output(req *pb.OutputRequest, stream pb.JobWorker_OutputServer)
 	}
 }
 
+// lookup returns the Job for id, or NotFound if it doesn't exist
 func (s *Server) lookup(id string) (*worker.Job, error) {
 	if id == "" {
 		return nil, status.Error(codes.InvalidArgument, "job_id is required")
@@ -112,6 +113,7 @@ func (s *Server) lookup(id string) (*worker.Job, error) {
 	return j, nil
 }
 
+// toProtoState maps the worker library's state enum to the proto enum
 func toProtoState(s worker.JobState) pb.JobState {
 	switch s {
 	case worker.JobStateRunning:

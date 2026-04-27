@@ -91,6 +91,7 @@ func authorize(ctx context.Context, method string, idMap IdentityMap) (context.C
 
 }
 
+// cnFromContext returns the CN from the client's verified cert or an error if not found
 func cnFromContext(ctx context.Context) (string, error) {
 	p, ok := peer.FromContext(ctx)
 	if !ok {
