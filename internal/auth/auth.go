@@ -7,6 +7,8 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"	
 	"google.golang.org/grpc/peer"
+
+	pb "github.com/anjalitiwari/job-worker/proto"
 )
 
 type Role int
@@ -33,10 +35,10 @@ type IdentityMap map[string]Role
 // allowedRoles is the per-RPC allowlist. Method names are full grpc paths like 
 // "//jobworker.JobWorker/Start"
 var allowedRoles = map[string][]Role{
-	"/jobworker.JobWorker/Start" : {RoleAdmin},
-	"/jobworker.JobWorker/Stop" : {RoleAdmin},
-	"/jobworker.JobWorker/Status" : {RoleAdmin, RoleViewer},
-	"/jobworker.JobWorker/Output" : {RoleAdmin, RoleViewer},
+    pb.JobWorker_Start_FullMethodName:  {RoleAdmin},
+    pb.JobWorker_Stop_FullMethodName:   {RoleAdmin},
+    pb.JobWorker_Status_FullMethodName: {RoleAdmin, RoleViewer},
+    pb.JobWorker_Output_FullMethodName: {RoleAdmin, RoleViewer},
 }
 
 type ctxKey struct{}

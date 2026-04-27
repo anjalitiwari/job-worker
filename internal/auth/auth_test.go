@@ -13,6 +13,8 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
+
+	pb "github.com/anjalitiwari/job-worker/proto"
 )
 
 func ctxWithCN(cn string) context.Context {
@@ -40,10 +42,10 @@ func runUnary(t *testing.T, method, cn string, idMap IdentityMap) error {
 func TestAdminCanCallEverything(t *testing.T) {
 	idMap := IdentityMap{"alice": RoleAdmin}
 	for _, m := range []string{
-		"/jobworker.JobWorker/Start",
-		"/jobworker.JobWorker/Stop",
-		"/jobworker.JobWorker/Status",
-		"/jobworker.JobWorker/Output",
+		pb.JobWorker_Start_FullMethodName,
+		pb.JobWorker_Stop_FullMethodName,
+		pb.JobWorker_Status_FullMethodName,
+		pb.JobWorker_Output_FullMethodName,
 	} {
 		if err := runUnary(t, m, "alice", idMap); err != nil {
 			t.Errorf("admin %s: %v", m, err)
@@ -56,8 +58,8 @@ func TestViewerLimitedToReadOnly(t *testing.T) {
 
 	// Allowed.
 	for _, m := range []string{
-		"/jobworker.JobWorker/Status",
-		"/jobworker.JobWorker/Output",
+		pb.JobWorker_Status_FullMethodName,
+		pb.JobWorker_Output_FullMethodName,
 	} {
 		if err := runUnary(t, m, "bob", idMap); err != nil {
 			t.Errorf("viewer %s: %v", m, err)
@@ -66,8 +68,8 @@ func TestViewerLimitedToReadOnly(t *testing.T) {
 
 	// Denied.
 	for _, m := range []string{
-		"/jobworker.JobWorker/Start",
-		"/jobworker.JobWorker/Stop",
+		pb.JobWorker_Start_FullMethodName,
+		pb.JobWorker_Stop_FullMethodName,
 	} {
 		err := runUnary(t, m, "bob", idMap)
 		if status.Code(err) != codes.PermissionDenied {
@@ -77,7 +79,7 @@ func TestViewerLimitedToReadOnly(t *testing.T) {
 }
 
 func TestUnknownCN(t *testing.T) {
-	err := runUnary(t, "/jobworker.JobWorker/Status", "stranger", IdentityMap{"alice": RoleAdmin})
+	err := runUnary(t, pb.JobWorker_Status_FullMethodName, "stranger", IdentityMap{"alice": RoleAdmin})
 	if status.Code(err) != codes.Unauthenticated {
 		t.Errorf("got %v, want Unauthenticated", err)
 	}
@@ -88,7 +90,7 @@ func TestNoPeer(t *testing.T) {
 	_, err := in(
 		context.Background(),
 		nil,
-		&grpc.UnaryServerInfo{FullMethod: "/jobworker.JobWorker/Status"},
+		&grpc.UnaryServerInfo{FullMethod: pb.JobWorker_Status_FullMethodName},
 		func(ctx context.Context, req any) (any, error) { return nil, nil },
 	)
 	if status.Code(err) != codes.Unauthenticated {
@@ -97,6 +99,7 @@ func TestNoPeer(t *testing.T) {
 }
 
 func TestUnknownMethod(t *testing.T) {
+	// Not a real RPC — testing that unknown methods are denied.
 	err := runUnary(t, "/jobworker.JobWorker/MysteryRPC", "alice", IdentityMap{"alice": RoleAdmin})
 	if status.Code(err) != codes.PermissionDenied {
 		t.Errorf("got %v", err)
@@ -110,7 +113,7 @@ func TestIdentityFlowsThrough(t *testing.T) {
 	_, err := in(
 		ctxWithCN("alice"),
 		nil,
-		&grpc.UnaryServerInfo{FullMethod: "/jobworker.JobWorker/Status"},
+		&grpc.UnaryServerInfo{FullMethod: pb.JobWorker_Status_FullMethodName},
 		func(ctx context.Context, req any) (any, error) {
 			seen = IdentityFromContext(ctx)
 			return nil, nil
@@ -131,7 +134,7 @@ func TestStreamPath(t *testing.T) {
 	err := in(
 		nil,
 		&fakeStream{ctx: ctxWithCN("bob")},
-		&grpc.StreamServerInfo{FullMethod: "/jobworker.JobWorker/Output"},
+		&grpc.StreamServerInfo{FullMethod: pb.JobWorker_Output_FullMethodName},
 		func(srv any, ss grpc.ServerStream) error {
 			called = true
 			if cn := IdentityFromContext(ss.Context()); cn != "bob" {
@@ -153,7 +156,7 @@ func TestStreamRejected(t *testing.T) {
 	err := in(
 		nil,
 		&fakeStream{ctx: ctxWithCN("bob")},
-		&grpc.StreamServerInfo{FullMethod: "/jobworker.JobWorker/Start"},
+		&grpc.StreamServerInfo{FullMethod: pb.JobWorker_Start_FullMethodName},
 		func(srv any, ss grpc.ServerStream) error { return nil },
 	)
 	if status.Code(err) != codes.PermissionDenied {
