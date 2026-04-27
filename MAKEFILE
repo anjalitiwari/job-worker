@@ -2,10 +2,9 @@
 
 all: build
 
-# Build the server and CLI binaries
+# Build the server binary
 build:
 	go build -o bin/server ./cmd/server
-	go build -o bin/jobctl ./cmd/jobctl
 
 # Run tests with the race detector
 test:

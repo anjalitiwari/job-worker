@@ -9,7 +9,7 @@ import (
 	"syscall"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
-	
+
 	"github.com/anjalitiwari/job-worker/internal/auth"
 	"github.com/anjalitiwari/job-worker/internal/server"
 	"github.com/anjalitiwari/job-worker/internal/tlsconfig"
@@ -46,14 +46,20 @@ func main() {
 
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	done := make(chan struct{})
 	go func() {
-		<-sig
-		log.Println("shutting down...")
-		gs.GracefulStop()
+		select {
+		case <-sig:
+			log.Println("shutting down...")
+			gs.GracefulStop()
+		case <-done:
+		}
 	}()
 
 	log.Printf("listening on %s", *listen)
-	if err := gs.Serve(ln); err != nil {
+	err = gs.Serve(ln)
+	close(done)
+	if err != nil {
 		log.Fatalf("serve: %v", err)
 	}
 }
