@@ -4,20 +4,6 @@ A prototype job worker service that starts, stops, queries, and streams output f
 
 See [design.md](./design.md) for the full design.
 
-## Components
-
-- `internal/worker` — worker library (runs a process, captures output, stops it)
-- `cmd/server` — gRPC server wrapping the library with mTLS
-- `cmd/jobctl` — CLI client
-
-## Build & test
-
-```bash
-make build   # compile server and jobctl into ./bin
-make test    # run all tests with -race
-make proto   # regenerate protobuf code
-
-```
 ## Quick start
 
 ```bash
@@ -26,7 +12,7 @@ make build     # compile bin/server and bin/jobctl
 ./bin/server   # listens on 127.0.0.1:50051 by default
 ```
 
-In another terminal 
+In another terminal:
 
 ```bash
 ./bin/jobctl start echo "hello world"
@@ -49,12 +35,20 @@ In another terminal
 - `cmd/server` — server binary
 - `cmd/jobctl` — CLI client
 
+## Identities
+
 `make certs` generates two client identities for local dev:
 
 | User  | Role   | Can call                    |
 |-------|--------|-----------------------------|
 | alice | admin  | Start, Stop, Status, Output |
 | bob   | viewer | Status, Output              |
+
+`jobctl` defaults to alice's certs. To use bob:
+
+```bash
+./bin/jobctl --cert certs/bob.crt --key certs/bob.key status <uuid>
+```
 
 ## Make targets
 
@@ -71,3 +65,5 @@ make clean   # remove bin/ and certs/
 ```bash
 go test -race ./...
 ```
+
+The integration tests spin up a real gRPC server with mTLS on a random port.
