@@ -44,14 +44,12 @@ func run(args []string) error {
 		usage()
 		return errors.New("command is required")
 	}
-
 	name,rest := args[0], args[1:]
 
 	if name == "help" || name == "--help" || name == "-h" {
 		usage()
 		return nil
 	}
-
 	cmd,ok := commands[name]
 	if !ok {
 		usage()
@@ -68,14 +66,12 @@ func run(args []string) error {
 	if err := fs.Parse(rest); err != nil {
 		return err
 	}
-
 	client, err := newClient(cfg)
 	if err != nil {
 		return fmt.Errorf("client: %w", err)
 	}
 
 	defer client.Close()
-
 	return cmd(client, fs.Args())
 }
 
@@ -95,7 +91,6 @@ func newClient(cfg config) (*jobctlClient, error) {
 	if err != nil {
 		return nil, fmt.Errorf("grpc: %w", err)
 	}
-
 	return &jobctlClient{rpc:  pb.NewJobWorkerClient(conn),conn: conn}, nil
 }
 
