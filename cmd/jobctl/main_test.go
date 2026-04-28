@@ -22,20 +22,25 @@ import (
 var binPath string
 
 func TestMain(m *testing.M) {
+	os.Exit(runTests(m))
+}
+
+func runTests(m *testing.M) int {
 	dir, err := os.MkdirTemp("", "jobctl-*")
 	if err != nil {
 		panic(err)
 	}
 	defer os.RemoveAll(dir)
+
 	binPath = filepath.Join(dir, "jobctl")
 	cmd := exec.Command("go", "build", "-o", binPath, ".")
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
 		panic("build: " + err.Error())
 	}
-
-	os.Exit(m.Run())
+	return m.Run()
 }
+
 
 func startServer(t *testing.T) (addr, certDir string) {
 	t.Helper()
@@ -96,6 +101,8 @@ func waitFor(t *testing.T, addr, dir, id, want string) string {
 	t.Helper()
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
+		// Transient errors during polling are expected — keep retrying
+        // until we see the wanted state or hit the deadline
 		out, _ := runCLI(t, addr, dir, "alice", "status", id)
 		if strings.Contains(out, want) {
 			return out
@@ -119,7 +126,10 @@ func TestStart(t *testing.T) {
 
 func TestStatus(t *testing.T) {
 	addr, dir := startServer(t)
-	out, _ := runCLI(t, addr, dir, "alice", "start", "echo", "hi")
+	out, err := runCLI(t, addr, dir, "alice", "start", "echo", "hi")
+	if err != nil {
+		t.Fatalf("start: %v: %s", err, out)
+	}
 	id := strings.TrimSpace(out)
 
 	got := waitFor(t, addr, dir, id, "EXITED")
@@ -130,7 +140,10 @@ func TestStatus(t *testing.T) {
 
 func TestStop(t *testing.T) {
 	addr, dir := startServer(t)
-	out, _ := runCLI(t, addr, dir, "alice", "start", "sleep", "60")
+	out, err := runCLI(t, addr, dir, "alice", "start", "sleep", "60")
+	if err != nil {
+		t.Fatalf("start: %v: %s", err, out)
+	}
 	id := strings.TrimSpace(out)
 
 	if _, err := runCLI(t, addr, dir, "alice", "stop", id); err != nil {
@@ -145,7 +158,10 @@ func TestStop(t *testing.T) {
 func TestOutput(t *testing.T) {
 	addr, dir := startServer(t)
 
-	out, _ := runCLI(t, addr, dir, "alice", "start", "sh", "-c", "echo line1; echo line2")
+	out, err := runCLI(t, addr, dir, "alice", "start", "sh", "-c", "echo line1; echo line2")
+	if err != nil {
+		t.Fatalf("start: %v: %s", err, out)
+	}
 	id := strings.TrimSpace(out)
 
 	got, err := runCLI(t, addr, dir, "alice", "output", id)
