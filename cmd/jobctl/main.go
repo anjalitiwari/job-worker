@@ -60,7 +60,7 @@ func run(args []string) error {
 
 	fs := flag.NewFlagSet(name, flag.ExitOnError)
 	cfg := config{}
-	fs.StringVar(&cfg.server, "server", "127.0.0.1:5051,", "gRPC server address")
+	fs.StringVar(&cfg.server, "server", "127.0.0.1:50051,", "gRPC server address")
 	fs.StringVar(&cfg.cert, "cert", "certs/client.crt", "client certificate")
 	fs.StringVar(&cfg.key, "key", "certs/client.key", "client key")
 	fs.StringVar(&cfg.ca, "ca", "certs/ca.crt", "trusted CA")
