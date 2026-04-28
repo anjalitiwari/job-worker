@@ -87,10 +87,11 @@ func runCLI(t *testing.T, addr, dir, user string, args ...string) (string, error
 	var out bytes.Buffer
 	cmd.Stdout = &out
 	cmd.Stderr = &out
-	return out.String(), cmd.Run()
+	err := cmd.Run()
+	return out.String(), err
 }
 
-// waitFor polls Status until the output contains the given substring.
+// waitFor polls Status until the output contains the given substring
 func waitFor(t *testing.T, addr, dir, id, want string) string {
 	t.Helper()
 	deadline := time.Now().Add(2 * time.Second)
