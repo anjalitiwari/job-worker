@@ -115,6 +115,10 @@ func (c *jobctlClient) Status(ctx context.Context, id string) (*pb.StatusRespons
 	return c.rpc.Status(ctx, &pb.StatusRequest{JobId: id})
 }
 
+func (j *jobctlClient) Stop(ctx context.Context, id string) error {
+	_, err := j.rpc.Stop(ctx, &pb.StopRequest{JobId: id})
+	return err
+}
 
 func (j *jobctlClient) StreamOutput(ctx context.Context, id string, w io.Writer) error {
 	stream, err := j.rpc.Output(ctx, &pb.OutputRequest{JobId: id})
